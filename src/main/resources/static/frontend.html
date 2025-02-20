@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Notifications</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <h1>WebSocket Notifications</h1>
+    <div class="status-container">
+        Connection Status: <span id="connection-status">Disconnected</span>
+    </div>
+    <div class="messages-container">
+        <h2>Received Messages:</h2>
+        <div id="messages"></div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+    }
+
+    .status-container {
+        margin: 20px 0;
+        padding: 10px;
+        background-color: #f5f5f5;
+        border-radius: 4px;
+    }
+
+    .messages-container {
+        border: 1px solid #ddd;
+        padding: 20px;
+        border-radius: 4px;
+        min-height: 200px;
+    }
+
+    .message {
+        padding: 10px;
+        margin: 5px 0;
+        background-color: #f9f9f9;
+        border-left: 3px solid #007bff;
+    }
+
+    .timestamp {
+        color: #666;
+        font-size: 0.8em;
+    }
+</style>
+
+<script>
+    let stompClient = null;
+    const statusElement = document.getElementById('connection-status');
+    const messagesElement = document.getElementById('messages');
+
+    function connect() {
+        const socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+
+        // Disable debug logging
+        stompClient.debug = null;
+
+        stompClient.connect({}, function(frame) {
+            // Update status
+            statusElement.textContent = 'Connected';
+            statusElement.style.color = 'green';
+
+            // Subscribe to notifications topic
+            stompClient.subscribe('/topic/notifications', function(message) {
+                displayMessage(message.body);
+            });
+
+            console.log('Connected to WebSocket');
+        }, function(error) {
+            // Handle errors
+            statusElement.textContent = 'Connection Error - Retrying...';
+            statusElement.style.color = 'red';
+            console.error('WebSocket Connection Error:', error);
+
+            // Attempt to reconnect after 5 seconds
+            setTimeout(connect, 5000);
+        });
+    }
+
+    function displayMessage(message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message';
+
+        const timestamp = new Date().toLocaleTimeString();
+
+        messageDiv.innerHTML = `
+                <div class="timestamp">${timestamp}</div>
+                <div class="content">${message}</div>
+            `;
+
+        messagesElement.insertBefore(messageDiv, messagesElement.firstChild);
+    }
+
+    // Connect when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        connect();
+    });
+
+    // Handle page visibility changes
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible' &&
+            (!stompClient || !stompClient.connected)) {
+            connect();
+        }
+    });
+</script>
+</body>
+</html>

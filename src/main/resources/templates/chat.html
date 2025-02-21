@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+<h2>Welcome to Chat</h2>
+<div id="messages"></div>
+
+<script>
+    const username = '[[${#authentication.principal.username}]]';
+    let stompClient = null;
+
+    function connect() {
+        const socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, function(frame) {
+            console.log('Connected: ' + frame);
+            stompClient.subscribe('/topic/private/' + username, function(message) {
+                showMessage(message.body);
+            });
+        });
+    }
+
+    function showMessage(message) {
+        const messagesDiv = document.getElementById('messages');
+        const messageElement = document.createElement('p');
+        messageElement.textContent = message;
+        messagesDiv.appendChild(messageElement);
+    }
+
+    connect();
+</script>
+</body>
+</html>
